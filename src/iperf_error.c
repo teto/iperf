@@ -282,10 +282,10 @@ iperf_strerror(int i_errno)
             snprintf(errstr, len, "unable to set CPU affinity");
             perr = 1;
             break;
-	case IEDAEMON:
-	    snprintf(errstr, len, "unable to become a daemon");
-	    perr = 1;
-	    break;
+        case IEDAEMON:
+            snprintf(errstr, len, "unable to become a daemon");
+            perr = 1;
+            break;
         case IECREATESTREAM:
             snprintf(errstr, len, "unable to create a new stream");
             herr = 1;
@@ -332,7 +332,7 @@ iperf_strerror(int i_errno)
             perr = 1;
             break;
         case IESETCONGESTION:
-            snprintf(errstr, len, "unable to set TCP_CONGESTION: " 
+            snprintf(errstr, len, "unable to set TCP_CONGESTION: "
                                   "Supplied congestion control algorithm not supported on this host");
             break;
 	case IEPIDFILE:

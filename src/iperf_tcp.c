@@ -313,6 +313,7 @@ iperf_tcp_connect(struct iperf_test *test)
     int s, opt;
     int saved_errno;
 
+    iprintf(test, "iperf_tcp_connect role=%c\n", test->role);
     if (test->bind_address) {
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = test->settings->domain;
