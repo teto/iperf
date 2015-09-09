@@ -522,6 +522,7 @@ iperf_on_connect(struct iperf_test *test)
     socklen_t len;
     int opt;
 
+    iprintf(test, "iperf_on_connect");
     now_secs = time((time_t*) 0);
     (void) strftime(now_str, sizeof(now_str), rfc1123_fmt, gmtime(&now_secs));
     if (test->json_output)
@@ -690,7 +691,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
                 test->json_output = 1;
                 break;
             case 'v':
-                printf("%s\n%s\n%s\n", version, get_system_info(), 
+                printf("%s\n%s\n%s\n", version, get_system_info(),
 		       get_optional_features());
                 exit(0);
             case 's':
@@ -998,9 +999,11 @@ int
 iperf_set_send_state(struct iperf_test *test, signed char state)
 {
     test->state = state;
+    iprintf(test, "iperf_ new state = %d\n", state);
     if (Nwrite(test->ctrl_sck, (char*) &state, sizeof(state), Ptcp) < 0) {
-	i_errno = IESENDMESSAGE;
-	return -1;
+        iprintf(test, "An error occured\n");
+        i_errno = IESENDMESSAGE;
+        return -1;
     }
     return 0;
 }
@@ -1186,7 +1189,7 @@ iperf_exchange_parameters(struct iperf_test *test)
             return -1;
 
         if ((s = test->protocol->listen(test)) < 0) {
-	    if (iperf_set_send_state(test, SERVER_ERROR) != 0)
+            if (iperf_set_send_state(test, SERVER_ERROR) != 0)
                 return -1;
             err = htonl(i_errno);
             if (Nwrite(test->ctrl_sck, (char*) &err, sizeof(err), Ptcp) < 0) {
@@ -1205,7 +1208,7 @@ iperf_exchange_parameters(struct iperf_test *test)
         test->prot_listener = s;
 
         // Send the control message to create streams and start the test
-	if (iperf_set_send_state(test, CREATE_STREAMS) != 0)
+        if (iperf_set_send_state(test, CREATE_STREAMS) != 0)
             return -1;
 
     }
@@ -1740,7 +1743,7 @@ protocol_new(void)
 void
 protocol_free(struct protocol *proto)
 {
-    free(proto); 
+    free(proto);
 }
 
 /**************************************************************************/
@@ -1900,7 +1903,7 @@ iperf_free_test(struct iperf_test *test)
     /* Free protocol list */
     while (!SLIST_EMPTY(&test->protocols)) {
         prot = SLIST_FIRST(&test->protocols);
-        SLIST_REMOVE_HEAD(&test->protocols, protocols);        
+        SLIST_REMOVE_HEAD(&test->protocols, protocols);
         free(prot);
     }
 
@@ -1985,7 +1988,7 @@ iperf_reset_test(struct iperf_test *test)
     CPU_ZERO(&test->cpumask);
 #endif /* HAVE_CPUSET_SETAFFINITY */
     test->state = 0;
-    
+
     test->ctrl_sck = -1;
     test->prot_listener = -1;
 
@@ -1997,7 +2000,7 @@ iperf_reset_test(struct iperf_test *test)
 
     FD_ZERO(&test->read_set);
     FD_ZERO(&test->write_set);
-    
+
     test->num_streams = 1;
     test->settings->socket_bufsize = 0;
     test->settings->blksize = DEFAULT_TCP_BLKSIZE;
@@ -2069,7 +2072,7 @@ iperf_stats_callback(struct iperf_test *test)
         rp = sp->result;
 
 	temp.bytes_transferred = test->sender ? rp->bytes_sent_this_interval : rp->bytes_received_this_interval;
-     
+
 	irp = TAILQ_LAST(&rp->interval_results, irlisthead);
         /* result->end_time contains timestamp of previous interval */
         if ( irp != NULL ) /* not the 1st interval */
@@ -2094,7 +2097,7 @@ iperf_stats_callback(struct iperf_test *test)
 		    if (temp.snd_cwnd > rp->stream_max_snd_cwnd) {
 			rp->stream_max_snd_cwnd = temp.snd_cwnd;
 		    }
-		    
+
 		    temp.rtt = get_rtt(&temp);
 		    if (temp.rtt > rp->stream_max_rtt) {
 			rp->stream_max_rtt = temp.rtt;
@@ -2273,7 +2276,7 @@ iperf_print_results(struct iperf_test *test)
 
     start_time = 0.;
     sp = SLIST_FIRST(&test->streams);
-    /* 
+    /*
      * If there is at least one stream, then figure out the length of time
      * we were running the tests and print out some statistics about
      * the streams.  It's possible to not have any streams at all
@@ -2438,8 +2441,8 @@ iperf_print_results(struct iperf_test *test)
 
 /**
  * Main report-printing callback.
- * Prints results either during a test (interval report only) or 
- * after the entire test has been run (last interval report plus 
+ * Prints results either during a test (interval report only) or
+ * after the entire test has been run (last interval report plus
  * overall summary).
  */
 void
@@ -2456,7 +2459,7 @@ iperf_reporter_callback(struct iperf_test *test)
             iperf_print_intermediate(test);
             iperf_print_results(test);
             break;
-    } 
+    }
 
 }
 
@@ -2507,10 +2510,10 @@ print_interval_results(struct iperf_test *test, struct iperf_stream *sp, cJSON *
     unit_snprintf(ubuf, UNIT_LEN, (double) (irp->bytes_transferred), 'A');
     bandwidth = (double) irp->bytes_transferred / (double) irp->interval_duration;
     unit_snprintf(nbuf, UNIT_LEN, bandwidth, test->settings->unit_format);
-    
+
     st = timeval_diff(&sp->result->start_time, &irp->interval_start_time);
     et = timeval_diff(&sp->result->start_time, &irp->interval_end_time);
-    
+
     if (test->protocol->id == Ptcp || test->protocol->id == Psctp) {
 	if (test->sender && test->sender_has_retransmits) {
 	    /* Interval, TCP with retransmits. */
@@ -2576,6 +2579,8 @@ iperf_new_stream(struct iperf_test *test, int s)
     struct iperf_stream *sp;
     char template[] = "/tmp/iperf3.XXXXXX";
 
+    iprintf(test, "iperf_new_stream");
+
     h_errno = 0;
 
     sp = (struct iperf_stream *) malloc(sizeof(struct iperf_stream));
@@ -2597,7 +2602,7 @@ iperf_new_stream(struct iperf_test *test, int s)
 
     memset(sp->result, 0, sizeof(struct iperf_stream_result));
     TAILQ_INIT(&sp->result->interval_results);
-    
+
     /* Create and randomize the buffer */
     sp->buffer_fd = mkstemp(template);
     if (sp->buffer_fd == -1) {
@@ -2636,23 +2641,24 @@ iperf_new_stream(struct iperf_test *test, int s)
     sp->rcv = test->protocol->recv;
 
     if (test->diskfile_name != (char*) 0) {
-	sp->diskfile_fd = open(test->diskfile_name, test->sender ? O_RDONLY : (O_WRONLY|O_CREAT|O_TRUNC), S_IRUSR|S_IWUSR);
-	if (sp->diskfile_fd == -1) {
-	    i_errno = IEFILE;
-            munmap(sp->buffer, sp->test->settings->blksize);
-            free(sp->result);
-            free(sp);
-	    return NULL;
-	}
+        sp->diskfile_fd = open(test->diskfile_name, test->sender ? O_RDONLY : (O_WRONLY|O_CREAT|O_TRUNC), S_IRUSR|S_IWUSR);
+        if (sp->diskfile_fd == -1) {
+            i_errno = IEFILE;
+                munmap(sp->buffer, sp->test->settings->blksize);
+                free(sp->result);
+                free(sp);
+            return NULL;
+        }
         sp->snd2 = sp->snd;
-	sp->snd = diskfile_send;
-	sp->rcv2 = sp->rcv;
-	sp->rcv = diskfile_recv;
+        sp->snd = diskfile_send;
+        sp->rcv2 = sp->rcv;
+        sp->rcv = diskfile_recv;
     } else
         sp->diskfile_fd = -1;
 
     /* Initialize stream */
     if (iperf_init_stream(sp, test) < 0) {
+        iprintf(test, "iperf_init_stream failed \n");
         close(sp->buffer_fd);
         munmap(sp->buffer, sp->test->settings->blksize);
         free(sp->result);
@@ -2670,6 +2676,8 @@ iperf_init_stream(struct iperf_stream *sp, struct iperf_test *test)
 {
     socklen_t len;
     int opt;
+
+    iprintf(test, "iperf_init_stream \n");
 
     len = sizeof(struct sockaddr_storage);
     if (getsockname(sp->socket, (struct sockaddr *) &sp->local_addr, &len) < 0) {
@@ -2711,7 +2719,7 @@ iperf_add_stream(struct iperf_test *test, struct iperf_stream *sp)
 {
     int i;
     struct iperf_stream *n, *prev;
-
+    iprintf(test, "iperf_add_stream");
     if (SLIST_EMPTY(&test->streams)) {
         SLIST_INSERT_HEAD(&test->streams, sp, streams);
         sp->id = 1;
@@ -2755,8 +2763,8 @@ diskfile_recv(struct iperf_stream *sp)
 
     r = sp->rcv2(sp);
     if (r > 0) {
-	(void) write(sp->diskfile_fd, sp->buffer, r);
-	(void) fsync(sp->diskfile_fd);
+        (void) write(sp->diskfile_fd, sp->buffer, r);
+        (void) fsync(sp->diskfile_fd);
     }
     return r;
 }
@@ -2786,18 +2794,18 @@ iperf_got_sigend(struct iperf_test *test)
     if (test->role == 'c' ||
       (test->role == 's' && test->state == TEST_RUNNING)) {
 
-	test->done = 1;
-	cpu_util(test->cpu_util);
-	test->stats_callback(test);
-	test->state = DISPLAY_RESULTS; /* change local state only */
-	if (test->on_test_finish)
-	    test->on_test_finish(test);
-	test->reporter_callback(test);
+        test->done = 1;
+        cpu_util(test->cpu_util);
+        test->stats_callback(test);
+        test->state = DISPLAY_RESULTS; /* change local state only */
+        if (test->on_test_finish)
+            test->on_test_finish(test);
+        test->reporter_callback(test);
     }
 
     if (test->ctrl_sck >= 0) {
-	test->state = (test->role == 'c') ? CLIENT_TERMINATE : SERVER_TERMINATE;
-	(void) Nwrite(test->ctrl_sck, (char*) &test->state, sizeof(signed char), Ptcp);
+        test->state = (test->role == 'c') ? CLIENT_TERMINATE : SERVER_TERMINATE;
+        (void) Nwrite(test->ctrl_sck, (char*) &test->state, sizeof(signed char), Ptcp);
     }
     i_errno = (test->role == 'c') ? IECLIENTTERM : IESERVERTERM;
     iperf_errexit(test, "interrupt - %s", iperf_strerror(i_errno));

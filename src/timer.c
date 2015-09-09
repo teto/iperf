@@ -51,9 +51,9 @@ static void
 getnow( struct timeval* nowP, struct timeval* nowP2 )
 {
     if ( nowP != NULL )
-	*nowP2 = *nowP;
+        *nowP2 = *nowP;
     else
-	(void) gettimeofday( nowP2, NULL );
+        (void) gettimeofday( nowP2, NULL );
 }
 
 
@@ -193,24 +193,24 @@ tmr_run( struct timeval* nowP )
     struct timeval now;
     Timer* t;
     Timer* next;
-
+    printf("iperf_ tmr_run\n");
     getnow( nowP, &now );
     for ( t = timers; t != NULL; t = next ) {
-	next = t->next;
-	/* Since the list is sorted, as soon as we find a timer
-	** that isn't ready yet, we are done.
-	*/
-	if ( t->time.tv_sec > now.tv_sec ||
-	     ( t->time.tv_sec == now.tv_sec &&
-	       t->time.tv_usec > now.tv_usec ) )
-	    break;
-	(t->timer_proc)( t->client_data, &now );
-	if ( t->periodic ) {
-	    /* Reschedule. */
-	    add_usecs( &t->time, t->usecs );
-	    list_resort( t );
-	} else
-	    tmr_cancel( t );
+        next = t->next;
+        /* Since the list is sorted, as soon as we find a timer
+        ** that isn't ready yet, we are done.
+        */
+        if ( t->time.tv_sec > now.tv_sec ||
+             ( t->time.tv_sec == now.tv_sec &&
+               t->time.tv_usec > now.tv_usec ) )
+            break;
+        (t->timer_proc)( t->client_data, &now );
+        if ( t->periodic ) {
+            /* Reschedule. */
+            add_usecs( &t->time, t->usecs );
+            list_resort( t );
+        } else
+            tmr_cancel( t );
     }
 }
 
@@ -219,7 +219,7 @@ void
 tmr_reset( struct timeval* nowP, Timer* t )
 {
     struct timeval now;
-    
+
     getnow( nowP, &now );
     t->time = now;
     add_usecs( &t->time, t->usecs );
