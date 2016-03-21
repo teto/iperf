@@ -607,6 +607,8 @@ iperf_run_server(struct iperf_test *test)
 	    (void) gettimeofday(&now, NULL);
 	    tmr_run(&now);
 	}
+
+        usleep(100);
     }
 
     cleanup_server(test);
